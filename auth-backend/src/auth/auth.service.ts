@@ -3,71 +3,55 @@ import {
   UnauthorizedException,
   BadRequestException,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { UsersService } from '../users/users.service';
+import { ConfigService } from '@nestjs/config';
+import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { RefreshToken } from './refresh-token.entity';
 import { Response } from 'express';
+import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
-// const { v4: uuidv4 } = require('uuid');
+import { UsersService } from '../users/users.service';
+import { User } from '../users/user.entity';
+import { RefreshToken } from './refresh-token.entity';
+
+export const REFRESH_COOKIE = 'refresh_token';
+export const REFRESH_COOKIE_PATH = '/auth/refresh';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
+  private readonly accessSecret: string;
+  private readonly refreshSecret: string;
+  private readonly accessTtl: JwtSignOptions['expiresIn'];
+  private readonly refreshTtlDays: number;
+
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
+    config: ConfigService,
     @InjectRepository(RefreshToken)
     private refreshRepo: Repository<RefreshToken>,
-  ) {}
+  ) {
+    this.accessSecret = config.getOrThrow<string>('JWT_ACCESS_SECRET');
+    this.refreshSecret = config.getOrThrow<string>('JWT_REFRESH_SECRET');
+    this.accessTtl =
+      config.getOrThrow<JwtSignOptions['expiresIn']>('JWT_ACCESS_TTL');
+    this.refreshTtlDays = config.getOrThrow<number>('JWT_REFRESH_TTL_DAYS');
+  }
 
   // validate user credentials
   async validateUser(email: string, password: string) {
     const user = await this.usersService.findByEmail(email);
     if (!user) throw new UnauthorizedException('Invalid credentials');
-    // password check performed in previous UsersService or here with bcrypt
-    const isMatch = await require('bcrypt').compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw new UnauthorizedException('Invalid credentials');
     return user;
   }
 
   // on login: create access token + refresh token (with DB record)
-  async login(user, res: Response) {
-    const payload = { sub: user.id, email: user.email };
-
-    const accessToken = this.jwtService.sign(payload, {
-      expiresIn: '15m',
-      secret: 'secretKey',
-    });
-
-    // create jti and store refresh token record
-    const jti = uuidv4();
-    const refreshPayload = { sub: user.id, email: user.email, jti };
-
-    const refreshToken = this.jwtService.sign(refreshPayload, {
-      expiresIn: '7d',
-      secret: 'secretKey',
-    });
-
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
-    const tokenRecord = this.refreshRepo.create({
-      jti,
-      user,
-      expiresAt,
-      revoked: false,
-    });
-    await this.refreshRepo.save(tokenRecord);
-
-    // set secure cookie (path limited to refresh route)
-    res.cookie('refresh_token', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/auth/refresh',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
+  async login(user: User, res: Response) {
+    const accessToken = await this.issueTokens(user, res);
     return {
       access_token: accessToken,
       user: { id: user.id, email: user.email },
@@ -79,16 +63,16 @@ export class AuthService {
     if (!refreshTokenFromCookie)
       throw new UnauthorizedException('No refresh token');
 
-    let payload: any;
+    let payload: { sub: number; jti?: string };
     try {
       payload = this.jwtService.verify(refreshTokenFromCookie, {
-        secret: 'secretKey',
+        secret: this.refreshSecret,
       });
-    } catch (err) {
+    } catch {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    const { sub: userId, jti } = payload;
+    const { jti } = payload;
     if (!jti) throw new BadRequestException('Refresh token missing jti');
 
     const tokenRecord = await this.refreshRepo.findOne({
@@ -102,54 +86,60 @@ export class AuthService {
     if (tokenRecord.expiresAt.getTime() < Date.now())
       throw new UnauthorizedException('Refresh token expired');
 
-    // rotation: revoke old record and create new jti+record + cookie
+    // rotation: revoke the used token, then issue a fresh pair
     tokenRecord.revoked = true;
     await this.refreshRepo.save(tokenRecord);
 
-    const user = tokenRecord.user;
-    const newJti = uuidv4();
-    const newRefreshPayload = { sub: user.id, email: user.email, jti: newJti };
-
-    const newRefreshToken = this.jwtService.sign(newRefreshPayload, {
-      expiresIn: '7d',
-      secret: 'secretKey',
-    });
-
-    const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    const newRecord = this.refreshRepo.create({
-      jti: newJti,
-      user,
-      expiresAt: newExpiresAt,
-      revoked: false,
-    });
-    await this.refreshRepo.save(newRecord);
-
-    const newAccessToken = this.jwtService.sign(
-      { sub: user.id, email: user.email },
-      {
-        expiresIn: '15m',
-        secret: 'secretKey',
-      },
-    );
-
-    res.cookie('refresh_token', newRefreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/auth/refresh',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    return { access_token: newAccessToken };
+    const accessToken = await this.issueTokens(tokenRecord.user, res);
+    return { access_token: accessToken };
   }
 
   async logout(userId: number, res: Response) {
     await this.refreshRepo.update({ user: { id: userId } }, { revoked: true });
-    res.clearCookie('refresh_token', { path: '/auth/refresh' });
+    res.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_PATH });
     return { message: 'Logged out' };
   }
 
   async revokeTokenByJti(jti: string) {
     await this.refreshRepo.update({ jti }, { revoked: true });
+  }
+
+  /**
+   * Signs a new access token and a new refresh token, stores the refresh
+   * token's jti in the DB and sets it as an httpOnly cookie.
+   * Returns the access token for the response body.
+   */
+  private async issueTokens(user: User, res: Response): Promise<string> {
+    const accessToken = this.jwtService.sign(
+      { sub: user.id, email: user.email },
+      { secret: this.accessSecret, expiresIn: this.accessTtl },
+    );
+
+    const jti = uuidv4();
+    const refreshToken = this.jwtService.sign(
+      { sub: user.id, email: user.email, jti },
+      { secret: this.refreshSecret, expiresIn: `${this.refreshTtlDays}d` },
+    );
+
+    const refreshTtlMs = this.refreshTtlDays * DAY_MS;
+    await this.refreshRepo.save(
+      this.refreshRepo.create({
+        jti,
+        user,
+        expiresAt: new Date(Date.now() + refreshTtlMs),
+        revoked: false,
+      }),
+    );
+
+    // secure cookie, only sent to the refresh route
+    res.cookie(REFRESH_COOKIE, refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: REFRESH_COOKIE_PATH,
+      maxAge: refreshTtlMs,
+    });
+
+    return accessToken;
   }
 }
