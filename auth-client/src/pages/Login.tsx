@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/auth-context";
 import { useNavigate } from "react-router-dom";
 
 export default function Login() {
@@ -13,7 +13,7 @@ export default function Login() {
     try {
       await login(email, password);
       navigate("/profile");
-    } catch (err) {
+    } catch {
       alert("Invalid credentials");
     }
   };

@@ -1,23 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import axiosClient, { setAccessToken } from "../api/axiosClient";
-
-interface User {
-  id: number;
-  email: string;
-  name: string;
-}
-
-interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
-  logout: () => Promise<void>;
-  fetchProfile: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType>({} as AuthContextType);
-export const useAuth = () => useContext(AuthContext);
+import { AuthContext, type User } from "./auth-context";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -51,23 +34,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setUser(null);
   };
 
-  // 🪄 NEW: Try refreshing token when app loads
-  const tryRefreshToken = async () => {
-    try {
-      const res = await axiosClient.post("/auth/refresh");
-      const newAccessToken = res.data.access_token;
-      setAccessToken(newAccessToken);
-      await fetchProfile();
-    } catch (err) {
-      console.log("No valid refresh token, user must log in again.");
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Try to restore the session from the refresh cookie when the app loads
   useEffect(() => {
-    tryRefreshToken(); // 🔄 Try to restore session on load
+    const tryRefreshToken = async () => {
+      try {
+        const res = await axiosClient.post("/auth/refresh");
+        setAccessToken(res.data.access_token);
+        const me = await axiosClient.get("/users/me");
+        setUser(me.data);
+      } catch {
+        console.log("No valid refresh token, user must log in again.");
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    tryRefreshToken();
   }, []);
 
   return (
