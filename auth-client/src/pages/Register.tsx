@@ -11,9 +11,13 @@ export default function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await register(email, password, name);
-    alert("Registered successfully. Please login.");
-    navigate("/login");
+    try {
+      await register(email, password, name);
+      alert("Registered successfully. Please login.");
+      navigate("/login");
+    } catch {
+      alert("Registration failed. That email may already be in use.");
+    }
   };
 
   return (
