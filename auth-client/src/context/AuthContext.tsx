@@ -32,7 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const register = async (email: string, password: string, name: string) => {
-    await axiosClient.post("/auth/register", { email, password, name });
+    await axiosClient.post("/users/register", { email, password, name });
   };
 
   const fetchProfile = async () => {
