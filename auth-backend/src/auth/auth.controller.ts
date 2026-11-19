@@ -1,5 +1,5 @@
 import { Controller, Post, Body, Res, Req, UseGuards } from '@nestjs/common';
-import { AuthService } from './auth.service';
+import { AuthService, REFRESH_COOKIE } from './auth.service';
 import { Request, Response } from 'express';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
@@ -21,8 +21,7 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    console.log(req);
-    const refreshToken = req.cookies?.refresh_token;
+    const refreshToken = req.cookies?.[REFRESH_COOKIE];
     return this.authService.refreshTokens(refreshToken, res);
   }
 
