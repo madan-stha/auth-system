@@ -2,15 +2,17 @@
 
 Planned development of **Auth System**, from a working JWT prototype to a secure, tested and documented authentication service.
 
-| Milestone | Focus | Status |
-|---|---|---|
-| [1. Security & configuration](#1-security--configuration) | Env-based config, secret management | ✅ Done |
-| [2. Validation & error handling](#2-validation--error-handling) | Input validation, safe responses | ✅ Done |
-| [3. Database & infrastructure](#3-database--infrastructure) | Migrations, Docker | ⬜ Planned |
-| [4. Advanced authentication](#4-advanced-authentication) | Roles, sessions, token reuse detection | ⬜ Planned |
-| [5. Testing & CI](#5-testing--ci) | Unit and e2e tests, GitHub Actions | 🔄 In progress |
-| [6. Frontend](#6-frontend) | UI, form validation, session handling | ⬜ Planned |
-| [7. Documentation & deployment](#7-documentation--deployment) | API docs, containers, hosting | 🔄 In progress |
+| Milestone | Focus | Status | Issue |
+|---|---|---|---|
+| [1. Security & configuration](#1-security--configuration) | Env-based config, secret management | ✅ Done | [#4](https://github.com/madan-stha/auth-system/issues/4) |
+| [2. Validation & error handling](#2-validation--error-handling) | Input validation, safe responses | ✅ Done | [#5](https://github.com/madan-stha/auth-system/issues/5) |
+| [3. Database & infrastructure](#3-database--infrastructure) | Migrations, Docker | ⬜ Planned | [#6](https://github.com/madan-stha/auth-system/issues/6) |
+| [4. Advanced authentication](#4-advanced-authentication) | Roles, sessions, token reuse detection | ⬜ Planned | [#7](https://github.com/madan-stha/auth-system/issues/7) |
+| [5. Testing & CI](#5-testing--ci) | Unit and e2e tests, GitHub Actions | 🔄 In progress | [#8](https://github.com/madan-stha/auth-system/issues/8) |
+| [6. Frontend](#6-frontend) | UI, form validation, session handling | ⬜ Planned | [#9](https://github.com/madan-stha/auth-system/issues/9) |
+| [7. Documentation & deployment](#7-documentation--deployment) | API docs, containers, hosting | 🔄 In progress | [#10](https://github.com/madan-stha/auth-system/issues/10) |
+
+Progress on each milestone is tracked in its GitHub issue.
 
 ---
 
