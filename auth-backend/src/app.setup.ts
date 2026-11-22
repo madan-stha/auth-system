@@ -6,6 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import * as cookieParser from 'cookie-parser';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 /**
  * Global middleware and settings shared by main.ts and the e2e tests,
@@ -33,4 +34,7 @@ export function configureApp(app: INestApplication): void {
 
   // Applies @Exclude() on entities (e.g. User.password) to every response.
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+
+  // One consistent JSON shape for every error response.
+  app.useGlobalFilters(new AllExceptionsFilter());
 }
