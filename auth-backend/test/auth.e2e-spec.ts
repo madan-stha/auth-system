@@ -45,7 +45,15 @@ describe('Auth flow (e2e)', () => {
     });
   });
 
-  it.todo('never returns the password hash (roadmap Day 2)');
+  it('does not return the password hash on register', async () => {
+    const res = await http
+      .post('/users/register')
+      .send({ ...credentials, email: 'nohash@example.com' });
+
+    expect(res.status).toBe(201);
+    expect(res.body).not.toHaveProperty('password');
+    expect(JSON.stringify(res.body)).not.toMatch(/\$2[aby]\$/); // bcrypt prefix
+  });
 
   it('rejects a wrong password', async () => {
     const res = await http
@@ -101,6 +109,16 @@ describe('Auth flow (e2e)', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.email).toBe(credentials.email);
+      expect(res.body).not.toHaveProperty('password');
+      expect(JSON.stringify(res.body)).not.toMatch(/\$2[aby]\$/);
+    });
+
+    it('does not return the password hash on login', async () => {
+      const res = await http
+        .post('/auth/login')
+        .send({ email: credentials.email, password: credentials.password });
+
+      expect(JSON.stringify(res.body)).not.toMatch(/\$2[aby]\$/);
     });
 
     it('blocks /users/me without a token', async () => {

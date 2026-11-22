@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
 
 @Entity('users')
 export class User {
@@ -14,7 +15,10 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column()
+  // Never loaded unless a query asks for it explicitly (login), and never
+  // serialized into a response even if it was loaded.
+  @Exclude({ toPlainOnly: true })
+  @Column({ select: false })
   password: string;
 
   @Column({ nullable: true })

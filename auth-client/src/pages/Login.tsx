@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../context/auth-context";
 import { useNavigate } from "react-router-dom";
+import { getErrorMessage } from "../api/errors";
 
 export default function Login() {
   const { login } = useAuth();
@@ -13,8 +14,8 @@ export default function Login() {
     try {
       await login(email, password);
       navigate("/profile");
-    } catch {
-      alert("Invalid credentials");
+    } catch (err) {
+      alert(getErrorMessage(err, "Login failed. Please try again."));
     }
   };
 

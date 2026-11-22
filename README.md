@@ -20,6 +20,12 @@ A full stack **JWT authentication** reference project: a **NestJS** API with sho
 - **Logout** revokes all of the user's refresh tokens and clears the cookie
 - **Protected routes** on both sides: a Passport `JwtAuthGuard` on the API and a `ProtectedRoute` component on the client
 - **Validated configuration**: the API refuses to start if a secret is missing, shorter than 32 characters, or reused for both token types
+- **Input validation**: DTOs reject bad input and unknown fields with clear `400` messages. Passwords need 8–72 characters with mixed case and a number, and emails are normalized (trimmed and lowercased).
+- **Password hashes never leave the server**: not loaded by default, and stripped from every response
+- **No account enumeration by timing**: login takes the same time whether or not the email exists
+- **`409 Conflict` for duplicate emails**, safe under concurrent sign-ups
+- **Consistent errors**: every error is `{ statusCode, error, message, path, timestamp }`, and internal details are never exposed
+- **End-to-end tests** for the full auth flow, running against an in-memory database
 
 ## How it works
 
@@ -70,6 +76,24 @@ A stolen access token is only useful for a few minutes. The refresh token can't 
 | `POST` | `/auth/logout` | Bearer | Revokes the user's refresh tokens and clears the cookie |
 | `GET` | `/users/me` | Bearer | The signed-in user's profile |
 | `GET` | `/users/summary` | Bearer | Demo report data (placeholder) |
+
+### Error responses
+Every error uses the same format:
+```json
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": ["password must be longer than or equal to 8 characters"],
+  "path": "/users/register",
+  "timestamp": "2026-11-22T10:15:30.000Z"
+}
+```
+| Status | When |
+|---|---|
+| `400` | Invalid or unknown fields in the request body |
+| `401` | Wrong credentials, or a missing, expired or revoked token |
+| `409` | Email already registered |
+| `500` | Unexpected error (details are logged on the server, never returned) |
 
 ## Project structure
 
@@ -146,14 +170,13 @@ Open http://localhost:5173, register an account and log in.
 | Lint | `npm run lint` | `npm run lint` |
 | Tests | `npm test`, `npm run test:e2e` | – |
 
-## Known limitations and roadmap
+## Roadmap
 
-This project is being improved step by step. See **[ROADMAP.md](ROADMAP.md)** for the full plan. Coming next:
+See **[ROADMAP.md](ROADMAP.md)** for the full plan. Coming next:
 
-- Input validation with DTOs, and making sure responses never include the password hash
 - TypeORM migrations instead of `synchronize`, plus Docker Compose
 - Roles (user and admin), refresh token reuse detection, per-device sessions and rate limiting
-- Unit and e2e tests with GitHub Actions CI
+- Unit tests and a GitHub Actions CI pipeline
 - A polished MUI interface and Swagger API docs
 
 ## Author
