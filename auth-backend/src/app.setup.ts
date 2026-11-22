@@ -1,5 +1,10 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  ClassSerializerInterceptor,
+  INestApplication,
+  ValidationPipe,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Reflector } from '@nestjs/core';
 import * as cookieParser from 'cookie-parser';
 
 /**
@@ -25,4 +30,7 @@ export function configureApp(app: INestApplication): void {
       transform: true, // run @Transform (trim/lowercase) and build DTO instances
     }),
   );
+
+  // Applies @Exclude() on entities (e.g. User.password) to every response.
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 }

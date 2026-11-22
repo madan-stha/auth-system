@@ -19,6 +19,10 @@ export const REFRESH_COOKIE_PATH = '/auth/refresh';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// bcrypt hash (cost 10) of a random string that is not anyone's password.
+// Compared against when the email is unknown, to keep timing constant.
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync(uuidv4(), 10);
+
 @Injectable()
 export class AuthService {
   private readonly accessSecret: string;
@@ -42,10 +46,16 @@ export class AuthService {
 
   // validate user credentials
   async validateUser(email: string, password: string) {
-    const user = await this.usersService.findByEmail(email);
-    if (!user) throw new UnauthorizedException('Invalid credentials');
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) throw new UnauthorizedException('Invalid credentials');
+    const user = await this.usersService.findByEmailWithPassword(email);
+    // Always run bcrypt, even for unknown emails, so response time doesn't
+    // reveal which emails have accounts.
+    const isMatch = await bcrypt.compare(
+      password,
+      user?.password ?? DUMMY_PASSWORD_HASH,
+    );
+    if (!user || !isMatch)
+      throw new UnauthorizedException('Invalid credentials');
+    delete user.password;
     return user;
   }
 

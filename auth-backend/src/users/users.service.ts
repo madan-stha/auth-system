@@ -22,6 +22,15 @@ export class UsersService {
     return this.usersRepo.findOne({ where: { email } });
   }
 
+  /** Includes the password hash (excluded by default). Only for credential checks. */
+  async findByEmailWithPassword(email: string): Promise<User | null> {
+    return this.usersRepo
+      .createQueryBuilder('user')
+      .addSelect('user.password')
+      .where('user.email = :email', { email })
+      .getOne();
+  }
+
   async findById(id: number): Promise<User | null> {
     return this.usersRepo.findOne({ where: { id } });
   }
