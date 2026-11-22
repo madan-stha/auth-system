@@ -76,6 +76,30 @@ describe('Input validation (e2e)', () => {
         .send({ email: 'SAM@example.com', password: valid.password });
       expect(login.status).toBe(201);
     });
+
+    it.each([
+      ['empty', ''],
+      ['blank', '   '],
+    ])(
+      'accepts an %s name as "not provided" (the form sends "")',
+      async (_case, name) => {
+        const res = await http
+          .post('/users/register')
+          .send({ ...valid, email: `noname-${_case}@example.com`, name });
+
+        expect(res.status).toBe(201);
+        expect(res.body.name ?? null).toBeNull();
+      },
+    );
+
+    it('trims the name', async () => {
+      const res = await http
+        .post('/users/register')
+        .send({ ...valid, email: 'trim@example.com', name: '  Sam  ' });
+
+      expect(res.status).toBe(201);
+      expect(res.body.name).toBe('Sam');
+    });
   });
 
   describe('duplicate accounts', () => {

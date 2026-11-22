@@ -6,6 +6,11 @@ export const NormalizeEmail = () =>
     typeof value === 'string' ? value.trim().toLowerCase() : value,
   );
 
-/** Trims surrounding whitespace from a string value. */
-export const Trim = () =>
-  Transform(({ value }) => (typeof value === 'string' ? value.trim() : value));
+/**
+ * Trims surrounding whitespace; a blank string becomes undefined, so an
+ * empty optional form field counts as "not provided".
+ */
+export const TrimOrUndefined = () =>
+  Transform(({ value }) =>
+    typeof value === 'string' ? value.trim() || undefined : value,
+  );

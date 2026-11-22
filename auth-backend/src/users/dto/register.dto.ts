@@ -6,7 +6,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { NormalizeEmail, Trim } from '../../common/transforms';
+import { NormalizeEmail, TrimOrUndefined } from '../../common/transforms';
 
 export class RegisterDto {
   @NormalizeEmail()
@@ -24,10 +24,9 @@ export class RegisterDto {
   })
   password: string;
 
+  @TrimOrUndefined()
   @IsOptional()
-  @Trim()
   @IsString()
-  @MinLength(1)
   @MaxLength(100)
   name?: string;
 }

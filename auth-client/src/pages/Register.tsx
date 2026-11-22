@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../context/auth-context";
 import { useNavigate } from "react-router-dom";
+import { getErrorMessage } from "../api/errors";
 
 export default function Register() {
   const { register } = useAuth();
@@ -15,8 +16,8 @@ export default function Register() {
       await register(email, password, name);
       alert("Registered successfully. Please login.");
       navigate("/login");
-    } catch {
-      alert("Registration failed. That email may already be in use.");
+    } catch (err) {
+      alert(getErrorMessage(err, "Registration failed. Please try again."));
     }
   };
 
