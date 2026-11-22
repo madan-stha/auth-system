@@ -78,6 +78,43 @@ describe('Input validation (e2e)', () => {
     });
   });
 
+  describe('duplicate accounts', () => {
+    const dupe = { email: 'dupe@example.com', password: 'Valid-passw0rd' };
+
+    beforeAll(async () => {
+      await http.post('/users/register').send(dupe).expect(201);
+    });
+
+    it('returns 409 Conflict for an email that is already registered', async () => {
+      const res = await http.post('/users/register').send(dupe);
+
+      expect(res.status).toBe(409);
+      expect(res.body.message).toBe(
+        'An account with this email already exists',
+      );
+    });
+
+    it('treats different casing as the same email', async () => {
+      const res = await http
+        .post('/users/register')
+        .send({ ...dupe, email: 'DUPE@Example.com' });
+
+      expect(res.status).toBe(409);
+    });
+
+    it('creates exactly one account when the same email signs up concurrently', async () => {
+      const body = { email: 'race@example.com', password: 'Valid-passw0rd' };
+      const results = await Promise.all(
+        Array.from({ length: 5 }, () =>
+          http.post('/users/register').send(body),
+        ),
+      );
+      const statuses = results.map((r) => r.status).sort();
+
+      expect(statuses).toEqual([201, 409, 409, 409, 409]);
+    });
+  });
+
   describe('POST /auth/login', () => {
     it('rejects an invalid email with 400', async () => {
       const res = await http
