@@ -19,8 +19,6 @@ export const envValidationSchema = Joi.object({
   DB_USERNAME: Joi.string().required(),
   DB_PASSWORD: Joi.string().allow('').required(),
   DB_NAME: Joi.string().required(),
-  // Auto-sync entities to tables. Dev convenience only; replaced by migrations later.
-  DB_SYNCHRONIZE: Joi.boolean().default(false),
 
   // Access and refresh tokens are signed with different secrets so that a
   // leaked access-token secret cannot be used to mint refresh tokens.

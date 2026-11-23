@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 
@@ -12,7 +13,8 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ unique: true })
+  @Index('UQ_users_email', { unique: true })
+  @Column({ length: 254 })
   email: string;
 
   // Never loaded unless a query asks for it explicitly (login), and never
@@ -21,7 +23,7 @@ export class User {
   @Column({ select: false })
   password: string;
 
-  @Column({ nullable: true })
+  @Column({ length: 100, nullable: true })
   name?: string;
 
   @CreateDateColumn()

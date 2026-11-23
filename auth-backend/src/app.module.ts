@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { envValidationSchema } from './config/env.validation';
+import { buildDataSourceOptions } from './database/typeorm.config';
 
 @Module({
   imports: [
@@ -16,16 +17,8 @@ import { envValidationSchema } from './config/env.validation';
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'mysql',
-        host: config.get<string>('DB_HOST'),
-        port: config.get<number>('DB_PORT'),
-        username: config.get<string>('DB_USERNAME'),
-        password: config.get<string>('DB_PASSWORD'),
-        database: config.get<string>('DB_NAME'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: config.get<boolean>('DB_SYNCHRONIZE'),
-      }),
+      useFactory: (config: ConfigService) =>
+        buildDataSourceOptions((key) => config.get<string>(key)?.toString()),
     }),
     UsersModule,
     AuthModule,
