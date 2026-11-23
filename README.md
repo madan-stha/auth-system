@@ -101,8 +101,11 @@ Every error uses the same format:
 auth-system/
 ├── auth-backend/                 NestJS API (port 3000)
 │   ├── src/config/               env validation schema (Joi)
-│   ├── src/auth/                 login, refresh, logout, JWT strategy + guard, refresh-token entity
+│   ├── src/database/             TypeORM config, migrations, seed script
+│   ├── src/auth/                 login, refresh, logout, JWT strategy + guard, token cleanup job
 │   ├── src/users/                user entity, register, profile
+│   ├── src/common/               exception filter, input transforms
+│   ├── docker-compose.yml        local MySQL (+ optional Adminer)
 │   └── .env.example
 ├── auth-client/                  React + Vite client (port 5173)
 │   ├── src/api/axiosClient.ts    token storage + 401 → refresh → retry interceptor
@@ -114,32 +117,42 @@ auth-system/
 
 ## Getting started
 
-**Requirements:** Node.js 20+ and MySQL 8
+**Requirements:** Node.js 20+, and Docker (or your own MySQL 8.4)
 
-### 1. Create the database
-```sql
-CREATE DATABASE auth_system;
-CREATE USER 'auth_app'@'localhost' IDENTIFIED BY 'choose-a-strong-password';
-GRANT ALL PRIVILEGES ON auth_system.* TO 'auth_app'@'localhost';
-```
-
-### 2. Run the API
+### 1. Configure the API
 ```bash
 cd auth-backend
 npm install
 cp .env.example .env
 ```
-Fill in `.env`: your DB password, plus two **different** secrets. Generate each one with:
+Fill in `.env`: choose a `DB_PASSWORD`, and set two **different** JWT secrets. Generate each one with:
 ```bash
 node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 ```
-Then start the API:
+
+### 2. Start MySQL and create the schema
+```bash
+docker compose up -d       # MySQL 8.4 on 127.0.0.1:3306, using the DB_* values from .env
+npm run migration:run      # create the tables
+npm run seed               # optional: demo@example.com / Demo-passw0rd, plus an admin user
+```
+<details>
+<summary>Using your own MySQL instead of Docker</summary>
+
+```sql
+CREATE DATABASE auth_system;
+CREATE USER 'auth_app'@'127.0.0.1' IDENTIFIED BY 'choose-a-strong-password';
+GRANT ALL PRIVILEGES ON auth_system.* TO 'auth_app'@'127.0.0.1';
+```
+Then run `npm run migration:run`.
+</details>
+
+### 3. Run the API
 ```bash
 npm run start:dev
 ```
-In development, `DB_SYNCHRONIZE=true` creates the tables automatically.
 
-### 3. Run the client
+### 4. Run the client
 ```bash
 cd auth-client
 npm install
@@ -147,19 +160,32 @@ npm run dev
 ```
 Open http://localhost:5173, register an account and log in.
 
+## Database migrations
+
+The schema is managed only by TypeORM migrations in `auth-backend/src/database/migrations` (`synchronize` is always off).
+
+```bash
+npm run migration:generate -- src/database/migrations/AddSomething   # after changing an entity
+npm run migration:run                                                # apply pending migrations
+npm run migration:revert                                             # undo the last migration
+npm run migration:show                                               # list applied / pending
+```
+
+Expired refresh tokens are deleted by an hourly background job. Revoked tokens are kept until they expire, so replaying one is still recognised as revoked.
+
 ## Environment variables
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `CORS_ORIGIN` | ✅ | – | Allowed client origins, comma-separated |
 | `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME` | ✅ | – | MySQL credentials |
-| `DB_HOST`, `DB_PORT` | | `localhost`, `3306` | MySQL host and port |
-| `DB_SYNCHRONIZE` | | `false` | Auto-create tables (development only) |
+| `DB_HOST`, `DB_PORT` | | `127.0.0.1`, `3306` | MySQL host and port |
 | `JWT_ACCESS_SECRET` | ✅ | – | At least 32 characters |
 | `JWT_REFRESH_SECRET` | ✅ | – | At least 32 characters, different from the access secret |
 | `JWT_ACCESS_TTL` | | `15m` | Access token lifetime |
 | `JWT_REFRESH_TTL_DAYS` | | `7` | Refresh token lifetime in days |
 | `PORT` | | `3000` | API port |
+| `SEED_ADMIN_PASSWORD` | | random | Admin password for `npm run seed` (generated and printed once if empty) |
 
 ## Scripts
 
@@ -169,12 +195,12 @@ Open http://localhost:5173, register an account and log in.
 | Build | `npm run build` | `npm run build` |
 | Lint | `npm run lint` | `npm run lint` |
 | Tests | `npm test`, `npm run test:e2e` | – |
+| Database | `npm run migration:run`, `npm run seed` | – |
 
 ## Roadmap
 
 See **[ROADMAP.md](ROADMAP.md)** for the full plan. Coming next:
 
-- TypeORM migrations instead of `synchronize`, plus Docker Compose
 - Roles (user and admin), refresh token reuse detection, per-device sessions and rate limiting
 - Unit tests and a GitHub Actions CI pipeline
 - A polished MUI interface and Swagger API docs
