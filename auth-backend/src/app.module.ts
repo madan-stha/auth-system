@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
@@ -20,6 +21,8 @@ import { buildDataSourceOptions } from './database/typeorm.config';
       useFactory: (config: ConfigService) =>
         buildDataSourceOptions((key) => config.get<string>(key)?.toString()),
     }),
+    // Runs @Cron jobs (e.g. refresh-token cleanup)
+    ScheduleModule.forRoot(),
     UsersModule,
     AuthModule,
   ],
