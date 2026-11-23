@@ -12,7 +12,7 @@ type EnvGetter = (key: string) => string | undefined;
 export function buildDataSourceOptions(env: EnvGetter): DataSourceOptions {
   return {
     type: 'mysql',
-    host: env('DB_HOST') ?? 'localhost',
+    host: env('DB_HOST') ?? '127.0.0.1',
     port: Number(env('DB_PORT') ?? 3306),
     username: env('DB_USERNAME'),
     password: env('DB_PASSWORD'),
