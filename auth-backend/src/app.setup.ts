@@ -6,6 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import * as cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 /**
@@ -15,6 +16,8 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 export function configureApp(app: INestApplication): void {
   const config = app.get(ConfigService);
 
+  // Security headers (nosniff, frame protection, HSTS, no X-Powered-By, ...)
+  app.use(helmet());
   app.use(cookieParser());
   app.enableCors({
     origin: config
