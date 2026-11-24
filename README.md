@@ -14,10 +14,11 @@ A full stack **JWT authentication** reference project: a **NestJS** API with sho
 - **Register and log in** with email and password (hashed with **bcrypt**)
 - **Access token** (JWT, 15 min) sent as a `Bearer` header and kept **in memory** on the client, never in `localStorage`
 - **Refresh token** (JWT, 7 days) in an **`httpOnly`, `sameSite=strict` cookie** that is only sent to `/auth/refresh`, so page scripts can't read it
-- **Refresh token rotation**: every refresh revokes the old token and issues a new one. Each token is tracked in the DB by its `jti`, so it can be revoked server-side.
+- **Refresh token rotation**: every refresh revokes the old token and issues a new one in the same session. Only a SHA-256 hash of each token id is stored.
+- **Refresh token reuse detection**: replaying an already-rotated refresh token (a sign it was stolen) revokes the whole session
 - **Silent session restore**: on page load the client calls `/auth/refresh` to sign the user back in
 - **Automatic retry**: an Axios interceptor catches a `401`, refreshes the token once and replays the original request
-- **Logout** revokes all of the user's refresh tokens and clears the cookie
+- **Per-device sessions**: list your sessions (browser, IP, last activity), revoke one, log out of this device or of all devices
 - **Protected routes** on both sides: a Passport `JwtAuthGuard` on the API and a `ProtectedRoute` component on the client
 - **Validated configuration**: the API refuses to start if a secret is missing, shorter than 32 characters, or reused for both token types
 - **Input validation**: DTOs reject bad input and unknown fields with clear `400` messages. Passwords need 8–72 characters with mixed case and a number, and emails are normalized (trimmed and lowercased).
@@ -69,6 +70,18 @@ sequenceDiagram
 
 A stolen access token is only useful for a few minutes. The refresh token can't be read by JavaScript (protection against XSS), and `sameSite=strict` protects it against CSRF.
 
+### Sessions and reuse detection
+
+Every login starts a **session**: a family of refresh tokens that share one id. Each refresh rotates to a new token in the same family, so only one token per session is valid at a time.
+
+- **Reuse detection**: if a token that was already rotated is presented again, two parties hold the same token, so one of them stole it. The server revokes the **whole session**, and both the attacker and the real user have to log in again.
+- **Grace window**: a token reused within `REFRESH_REUSE_GRACE_SECONDS` (default 10 s) of its rotation is only rejected. That is almost always two tabs refreshing at the same moment, not theft.
+- **Race-safe rotation**: the old token is claimed with a conditional `UPDATE ... WHERE revoked = false`, so of several simultaneous refreshes with one token exactly one succeeds.
+- **Hashed storage**: the database holds only a SHA-256 hash of each token id.
+- The client shares one in-flight refresh between all requests, so it never spends its own token twice.
+
+Access tokens are stateless, so an access token from an ended session stays valid until it expires (at most `JWT_ACCESS_TTL`, 15 minutes by default).
+
 ## API
 
 | Method | Endpoint | Auth | Description |
@@ -76,7 +89,10 @@ A stolen access token is only useful for a few minutes. The refresh token can't 
 | `POST` | `/users/register` | – | Create an account `{ email, password, name? }` |
 | `POST` | `/auth/login` | – | Log in `{ email, password }`. Returns `access_token` and sets the refresh cookie. |
 | `POST` | `/auth/refresh` | Refresh cookie | Rotates the refresh token and returns a new `access_token` |
-| `POST` | `/auth/logout` | Bearer | Revokes the user's refresh tokens and clears the cookie |
+| `POST` | `/auth/logout` | Bearer | Ends the current session (this device) and clears the cookie |
+| `POST` | `/auth/logout-all` | Bearer | Ends every session of the user, on every device |
+| `GET` | `/auth/sessions` | Bearer | Active sessions: browser, IP, start time, last activity; `current` marks this device |
+| `DELETE` | `/auth/sessions/:id` | Bearer | Ends one session (e.g. a lost phone); `404` if it is not yours |
 | `GET` | `/users/me` | Bearer | The signed-in user's profile |
 | `GET` | `/users/summary` | Bearer, **admin** | Account statistics: users, admins, new sign-ups, active sessions |
 
@@ -189,6 +205,7 @@ Expired refresh tokens are deleted by an hourly background job. Revoked tokens a
 | `JWT_REFRESH_SECRET` | ✅ | – | At least 32 characters, different from the access secret |
 | `JWT_ACCESS_TTL` | | `15m` | Access token lifetime |
 | `JWT_REFRESH_TTL_DAYS` | | `7` | Refresh token lifetime in days |
+| `REFRESH_REUSE_GRACE_SECONDS` | | `10` | A just-rotated token reused within this window is only rejected (two tabs refreshing at once), not treated as theft. `0` disables |
 | `PORT` | | `3000` | API port |
 | `RATE_LIMIT_TTL_SECONDS` | | `60` | Rate-limit window |
 | `RATE_LIMIT_MAX` | | `100` | Requests per IP per window, on every route |
@@ -209,7 +226,6 @@ Expired refresh tokens are deleted by an hourly background job. Revoked tokens a
 
 See **[ROADMAP.md](ROADMAP.md)** for the full plan. Coming next:
 
-- Refresh token reuse detection, hashed refresh tokens and per-device sessions
 - Unit tests and a GitHub Actions CI pipeline
 - A polished MUI interface and Swagger API docs
 
