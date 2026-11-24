@@ -8,6 +8,7 @@ import {
   seedUsers,
 } from '../src/database/seeds/seed-users';
 import { RegisterDto } from '../src/users/dto/register.dto';
+import { Role } from '../src/auth/roles/role.enum';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { createTestApp } from './utils/create-test-app';
@@ -47,6 +48,11 @@ describe('Seed users (e2e)', () => {
       .post('/auth/login')
       .send({ email: ADMIN_EMAIL, password: results[1].generatedPassword })
       .expect(201);
+  });
+
+  it('gives the admin the admin role and the demo user the user role', async () => {
+    expect((await users.findByEmail(ADMIN_EMAIL))?.role).toBe(Role.ADMIN);
+    expect((await users.findByEmail(DEMO_USER.email))?.role).toBe(Role.USER);
   });
 
   it('is idempotent and never reveals a password for existing accounts', async () => {

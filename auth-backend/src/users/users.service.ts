@@ -1,7 +1,14 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import {
+  MoreThan,
+  MoreThanOrEqual,
+  QueryFailedError,
+  Repository,
+} from 'typeorm';
 import { User } from './user.entity';
+import { RefreshToken } from '../auth/refresh-token.entity';
+import { Role } from '../auth/roles/role.enum';
 import * as bcrypt from 'bcrypt';
 
 const EMAIL_TAKEN = 'An account with this email already exists';
@@ -16,9 +23,22 @@ function isUniqueViolation(err: unknown): boolean {
   );
 }
 
+export interface UsersSummary {
+  totalUsers: number;
+  admins: number;
+  newUsersLast7Days: number;
+  /** Refresh tokens that are neither revoked nor expired. */
+  activeSessions: number;
+  generatedAt: string;
+}
+
 @Injectable()
 export class UsersService {
-  constructor(@InjectRepository(User) private usersRepo: Repository<User>) {}
+  constructor(
+    @InjectRepository(User) private usersRepo: Repository<User>,
+    @InjectRepository(RefreshToken)
+    private refreshRepo: Repository<RefreshToken>,
+  ) {}
 
   async create(email: string, password: string, name?: string): Promise<User> {
     if (await this.usersRepo.exists({ where: { email } })) {
@@ -59,13 +79,34 @@ export class UsersService {
     return this.usersRepo.findOne({ where: { id } });
   }
 
-  getSummary() {
+  /** Sets a user's role. Returns false if no user has that email. */
+  async setRole(email: string, role: Role): Promise<boolean> {
+    const result = await this.usersRepo.update({ email }, { role });
+    return (result.affected ?? 0) > 0;
+  }
+
+  /** Account and session statistics for the admin dashboard. */
+  async getSummary(now: Date = new Date()): Promise<UsersSummary> {
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const [totalUsers, admins, newUsersLast7Days, activeSessions] =
+      await Promise.all([
+        this.usersRepo.count(),
+        this.usersRepo.count({ where: { role: Role.ADMIN } }),
+        this.usersRepo.count({
+          where: { createdAt: MoreThanOrEqual(weekAgo) },
+        }),
+        this.refreshRepo.count({
+          where: { revoked: false, expiresAt: MoreThan(now) },
+        }),
+      ]);
+
     return {
-      totalUsers: 120,
-      totalOrders: 45,
-      revenue: 13450,
-      topProduct: 'Wireless Mouse',
-      updatedAt: new Date().toISOString(),
+      totalUsers,
+      admins,
+      newUsersLast7Days,
+      activeSessions,
+      generatedAt: now.toISOString(),
     };
   }
 }
