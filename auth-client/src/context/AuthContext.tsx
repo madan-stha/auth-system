@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from "react";
-import axiosClient, { setAccessToken } from "../api/axiosClient";
+import axiosClient, {
+  refreshAccessToken,
+  setAccessToken,
+  setSessionExpiredHandler,
+} from "../api/axiosClient";
 import { AuthContext, type User } from "./auth-context";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -34,12 +38,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setUser(null);
   };
 
-  // Try to restore the session from the refresh cookie when the app loads
+  // If a refresh fails later (session expired, revoked from another device,
+  // or ended by reuse detection), drop the user so routes redirect to login.
+  useEffect(() => {
+    setSessionExpiredHandler(() => setUser(null));
+    return () => setSessionExpiredHandler(null);
+  }, []);
+
+  // Try to restore the session from the refresh cookie when the app loads.
+  // refreshAccessToken() shares one in-flight request, so StrictMode running
+  // this effect twice doesn't spend the single-use refresh token twice.
   useEffect(() => {
     const tryRefreshToken = async () => {
       try {
-        const res = await axiosClient.post("/auth/refresh");
-        setAccessToken(res.data.access_token);
+        await refreshAccessToken();
         const me = await axiosClient.get("/users/me");
         setUser(me.data);
       } catch {
