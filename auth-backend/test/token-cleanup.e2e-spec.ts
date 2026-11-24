@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import * as request from 'supertest';
 import { RefreshToken } from '../src/auth/refresh-token.entity';
 import { TokenCleanupService } from '../src/auth/token-cleanup.service';
+import { hashJti } from '../src/auth/auth.service';
 import { User } from '../src/users/user.entity';
 import { createTestApp } from './utils/create-test-app';
 
@@ -33,16 +34,19 @@ describe('Refresh token cleanup (e2e)', () => {
   });
 
   async function addToken(expiresInMs: number, revoked: boolean) {
-    const jti = uuidv4();
+    const jtiHash = hashJti(uuidv4());
     await tokens.save(
       tokens.create({
-        jti,
+        jtiHash,
+        familyId: uuidv4(),
+        sessionStartedAt: new Date(),
         user,
         revoked,
+        revokedAt: revoked ? new Date() : null,
         expiresAt: new Date(Date.now() + expiresInMs),
       }),
     );
-    return jti;
+    return jtiHash;
   }
 
   it('deletes expired tokens and keeps unexpired ones, including revoked', async () => {
@@ -54,7 +58,7 @@ describe('Refresh token cleanup (e2e)', () => {
     const deleted = await cleanup.deleteExpired();
 
     expect(deleted).toBe(2);
-    const remaining = (await tokens.find()).map((t) => t.jti).sort();
+    const remaining = (await tokens.find()).map((t) => t.jtiHash).sort();
     expect(remaining).toEqual([activeRevoked, active].sort());
     expect(remaining).not.toContain(expired);
     expect(remaining).not.toContain(expiredRevoked);

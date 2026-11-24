@@ -22,6 +22,7 @@ export const TEST_ENV = {
   JWT_REFRESH_SECRET: 'test-refresh-secret-0123456789abcdefghijk',
   JWT_ACCESS_TTL: '15m',
   JWT_REFRESH_TTL_DAYS: '7',
+  REFRESH_REUSE_GRACE_SECONDS: '10',
   // High limits so suites that log in many times aren't throttled;
   // rate-limit tests pass lower values to createTestApp().
   RATE_LIMIT_TTL_SECONDS: '60',
@@ -55,6 +56,8 @@ export async function createTestApp(
         entities: [User, RefreshToken],
         synchronize: true,
         dropSchema: true,
+        // Fail fast on schema errors instead of retrying until timeout
+        retryAttempts: 0,
       }),
       RateLimitModule,
       UsersModule,

@@ -91,6 +91,20 @@ describe('Auth flow (e2e)', () => {
       expect(accessToken).toEqual(expect.any(String));
     });
 
+    it('returns the user with name and role, without the password', async () => {
+      const res = await http
+        .post('/auth/login')
+        .send({ email: credentials.email, password: credentials.password })
+        .expect(201);
+
+      expect(res.body.user).toEqual({
+        id: expect.any(Number),
+        email: credentials.email,
+        name: credentials.name,
+        role: 'user',
+      });
+    });
+
     it('sets the refresh token as an httpOnly, strict cookie scoped to /auth/refresh', async () => {
       const res = await http
         .post('/auth/login')
@@ -161,7 +175,8 @@ describe('Auth flow (e2e)', () => {
         .post('/auth/refresh')
         .set('Cookie', refreshCookie);
       expect(replay.status).toBe(401);
-      expect(replay.body.message).toBe('Refresh token revoked');
+      // within the reuse grace window: rejected, session kept
+      expect(replay.body.message).toBe('Refresh token already used');
 
       refreshCookie = rotatedCookie;
     });
