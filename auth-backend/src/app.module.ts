@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { envValidationSchema } from './config/env.validation';
 import { buildDataSourceOptions } from './database/typeorm.config';
+import { RateLimitModule } from './common/rate-limit/rate-limit.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { buildDataSourceOptions } from './database/typeorm.config';
     }),
     // Runs @Cron jobs (e.g. refresh-token cleanup)
     ScheduleModule.forRoot(),
+    RateLimitModule,
     UsersModule,
     AuthModule,
   ],

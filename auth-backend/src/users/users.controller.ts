@@ -6,11 +6,13 @@ import { Roles } from '../auth/roles/roles.decorator';
 import { Role } from '../auth/roles/role.enum';
 import { AuthUser, CurrentUser } from '../auth/auth-user';
 import { RegisterDto } from './dto/register.dto';
+import { AuthRateLimit } from '../common/rate-limit/rate-limit.module';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @AuthRateLimit()
   @Post('register')
   async register(@Body() body: RegisterDto) {
     return this.usersService.create(body.email, body.password, body.name);

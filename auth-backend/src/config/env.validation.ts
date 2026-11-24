@@ -32,4 +32,10 @@ export const envValidationSchema = Joi.object({
     }),
   JWT_ACCESS_TTL: Joi.string().default('15m'),
   JWT_REFRESH_TTL_DAYS: Joi.number().integer().min(1).default(7),
+
+  // Per-IP rate limits, counted over a window of RATE_LIMIT_TTL_SECONDS.
+  RATE_LIMIT_TTL_SECONDS: Joi.number().integer().min(1).default(60),
+  RATE_LIMIT_MAX: Joi.number().integer().min(1).default(100),
+  // Stricter limit for login and sign-up (brute-force protection).
+  AUTH_RATE_LIMIT_MAX: Joi.number().integer().min(1).default(5),
 });

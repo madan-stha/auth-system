@@ -4,11 +4,13 @@ import { Request, Response } from 'express';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LoginDto } from './dto/login.dto';
 import { AuthUser, CurrentUser } from './auth-user';
+import { AuthRateLimit } from '../common/rate-limit/rate-limit.module';
 
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @AuthRateLimit()
   @Post('login')
   async login(
     @Body() body: LoginDto,
