@@ -1,13 +1,18 @@
-import { Controller, Post, Body, UseGuards, Get, Req } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { Request } from 'express';
+import { RolesGuard } from '../auth/roles/roles.guard';
+import { Roles } from '../auth/roles/roles.decorator';
+import { Role } from '../auth/roles/role.enum';
+import { AuthUser, CurrentUser } from '../auth/auth-user';
 import { RegisterDto } from './dto/register.dto';
+import { AuthRateLimit } from '../common/rate-limit/rate-limit.module';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @AuthRateLimit()
   @Post('register')
   async register(@Body() body: RegisterDto) {
     return this.usersService.create(body.email, body.password, body.name);
@@ -15,12 +20,12 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  async me(@Req() req: Request) {
-    const user = req.user as any; // from JwtStrategy.validate
+  async me(@CurrentUser() user: AuthUser) {
     return this.usersService.findById(user.id);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
   @Get('summary')
   async getSummary() {
     return this.usersService.getSummary();

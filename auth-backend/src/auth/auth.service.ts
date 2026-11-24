@@ -13,6 +13,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { UsersService } from '../users/users.service';
 import { User } from '../users/user.entity';
 import { RefreshToken } from './refresh-token.entity';
+import { AccessTokenPayload } from './auth-user';
 
 export const REFRESH_COOKIE = 'refresh_token';
 export const REFRESH_COOKIE_PATH = '/auth/refresh';
@@ -64,7 +65,7 @@ export class AuthService {
     const accessToken = await this.issueTokens(user, res);
     return {
       access_token: accessToken,
-      user: { id: user.id, email: user.email },
+      user: { id: user.id, email: user.email, role: user.role },
     };
   }
 
@@ -120,10 +121,17 @@ export class AuthService {
    * Returns the access token for the response body.
    */
   private async issueTokens(user: User, res: Response): Promise<string> {
-    const accessToken = this.jwtService.sign(
-      { sub: user.id, email: user.email },
-      { secret: this.accessSecret, expiresIn: this.accessTtl },
-    );
+    // The role is read from the DB on every login and refresh, so a role
+    // change takes effect within one access-token lifetime (JWT_ACCESS_TTL).
+    const payload: AccessTokenPayload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    };
+    const accessToken = this.jwtService.sign(payload, {
+      secret: this.accessSecret,
+      expiresIn: this.accessTtl,
+    });
 
     const jti = uuidv4();
     const refreshToken = this.jwtService.sign(

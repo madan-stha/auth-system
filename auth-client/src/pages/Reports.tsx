@@ -1,26 +1,33 @@
 import { useEffect, useState } from "react";
+import axios from "axios";
 import axiosClient from "../api/axiosClient";
+import { getErrorMessage } from "../api/errors";
 import { useAuth } from "../context/auth-context";
 
-interface ReportSummary {
+interface UsersSummary {
   totalUsers: number;
-  totalOrders: number;
-  revenue: number;
-  topProduct: string;
-  updatedAt: string;
+  admins: number;
+  newUsersLast7Days: number;
+  activeSessions: number;
+  generatedAt: string;
 }
 
 export default function Reports() {
   const { user } = useAuth();
-  const [report, setReport] = useState<ReportSummary | null>(null);
+  const [report, setReport] = useState<UsersSummary | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchReport = async () => {
       try {
-        const res = await axiosClient.get("/users/summary");
+        const res = await axiosClient.get<UsersSummary>("/users/summary");
         setReport(res.data);
       } catch (err) {
-        console.error("Error fetching report:", err);
+        if (axios.isAxiosError(err) && err.response?.status === 403) {
+          setError("Reports are only available to administrators.");
+        } else {
+          setError(getErrorMessage(err, "Could not load the report."));
+        }
       }
     };
 
@@ -32,24 +39,26 @@ export default function Reports() {
   return (
     <div>
       <h2>Reports Summary</h2>
-      {!report ? (
+      {error ? (
+        <p role="alert">{error}</p>
+      ) : !report ? (
         <p>Loading report...</p>
       ) : (
         <div style={{ lineHeight: "1.8" }}>
           <p>
-            <b>Total Users:</b> {report.totalUsers}
+            <b>Total users:</b> {report.totalUsers}
           </p>
           <p>
-            <b>Total Orders:</b> {report.totalOrders}
+            <b>Admins:</b> {report.admins}
           </p>
           <p>
-            <b>Revenue:</b> ${report.revenue}
+            <b>New users (last 7 days):</b> {report.newUsersLast7Days}
           </p>
           <p>
-            <b>Top Product:</b> {report.topProduct}
+            <b>Active sessions:</b> {report.activeSessions}
           </p>
           <p>
-            <b>Last Updated:</b> {new Date(report.updatedAt).toLocaleString()}
+            <b>Generated:</b> {new Date(report.generatedAt).toLocaleString()}
           </p>
         </div>
       )}

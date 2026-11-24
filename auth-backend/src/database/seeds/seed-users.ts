@@ -1,6 +1,7 @@
 import { ConflictException } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { UsersService } from '../../users/users.service';
+import { Role } from '../../auth/roles/role.enum';
 
 export const DEMO_USER = {
   email: 'demo@example.com',
@@ -62,6 +63,9 @@ export async function seedUsers(
     password,
     'Admin',
   );
+  // Always (re)apply the role, so databases seeded before roles existed
+  // get their admin promoted too.
+  await users.setRole(ADMIN_EMAIL, Role.ADMIN);
 
   return [
     { email: DEMO_USER.email, status: demoStatus },

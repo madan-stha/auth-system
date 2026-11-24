@@ -3,11 +3,14 @@ import { AuthService, REFRESH_COOKIE } from './auth.service';
 import { Request, Response } from 'express';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LoginDto } from './dto/login.dto';
+import { AuthUser, CurrentUser } from './auth-user';
+import { AuthRateLimit } from '../common/rate-limit/rate-limit.module';
 
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @AuthRateLimit()
   @Post('login')
   async login(
     @Body() body: LoginDto,
@@ -29,8 +32,10 @@ export class AuthController {
   // Logout requires a valid access token to identify the user.
   @UseGuards(JwtAuthGuard)
   @Post('logout')
-  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const user = req.user as any;
+  async logout(
+    @CurrentUser() user: AuthUser,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     return this.authService.logout(user.id, res);
   }
 }

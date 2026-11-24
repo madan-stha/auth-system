@@ -7,6 +7,7 @@ import {
   Index,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
+import { Role } from '../auth/roles/role.enum';
 
 @Entity('users')
 export class User {
@@ -25,6 +26,10 @@ export class User {
 
   @Column({ length: 100, nullable: true })
   name?: string;
+
+  // New accounts are always regular users; admins are promoted explicitly.
+  @Column({ type: 'simple-enum', enum: Role, default: Role.USER })
+  role: Role;
 
   @CreateDateColumn()
   createdAt: Date;
