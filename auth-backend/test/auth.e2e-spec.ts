@@ -161,7 +161,8 @@ describe('Auth flow (e2e)', () => {
         .post('/auth/refresh')
         .set('Cookie', refreshCookie);
       expect(replay.status).toBe(401);
-      expect(replay.body.message).toBe('Refresh token revoked');
+      // within the reuse grace window: rejected, session kept
+      expect(replay.body.message).toBe('Refresh token already used');
 
       refreshCookie = rotatedCookie;
     });

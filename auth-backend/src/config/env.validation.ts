@@ -32,6 +32,10 @@ export const envValidationSchema = Joi.object({
     }),
   JWT_ACCESS_TTL: Joi.string().default('15m'),
   JWT_REFRESH_TTL_DAYS: Joi.number().integer().min(1).default(7),
+  // A rotated refresh token presented again within this many seconds is only
+  // rejected (usually two tabs refreshing at once). After that, reuse is
+  // treated as theft and the whole session is revoked. 0 disables the grace.
+  REFRESH_REUSE_GRACE_SECONDS: Joi.number().integer().min(0).default(10),
 
   // Per-IP rate limits, counted over a window of RATE_LIMIT_TTL_SECONDS.
   RATE_LIMIT_TTL_SECONDS: Joi.number().integer().min(1).default(60),
