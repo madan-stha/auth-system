@@ -25,6 +25,9 @@ A full stack **JWT authentication** reference project: a **NestJS** API with sho
 - **No account enumeration by timing**: login takes the same time whether or not the email exists
 - **`409 Conflict` for duplicate emails**, safe under concurrent sign-ups
 - **Consistent errors**: every error is `{ statusCode, error, message, path, timestamp }`, and internal details are never exposed
+- **Role-based access control**: `user` and `admin` roles carried in the access token, with a `@Roles()` decorator and `RolesGuard` (`403` for other roles)
+- **Rate limiting** per IP on every route, with a much stricter limit on login and sign-up against password guessing (`429`)
+- **Security headers** with `helmet`
 - **End-to-end tests** for the full auth flow, running against an in-memory database
 
 ## How it works
@@ -75,7 +78,7 @@ A stolen access token is only useful for a few minutes. The refresh token can't 
 | `POST` | `/auth/refresh` | Refresh cookie | Rotates the refresh token and returns a new `access_token` |
 | `POST` | `/auth/logout` | Bearer | Revokes the user's refresh tokens and clears the cookie |
 | `GET` | `/users/me` | Bearer | The signed-in user's profile |
-| `GET` | `/users/summary` | Bearer | Demo report data (placeholder) |
+| `GET` | `/users/summary` | Bearer, **admin** | Account statistics: users, admins, new sign-ups, active sessions |
 
 ### Error responses
 Every error uses the same format:
@@ -92,7 +95,9 @@ Every error uses the same format:
 |---|---|
 | `400` | Invalid or unknown fields in the request body |
 | `401` | Wrong credentials, or a missing, expired or revoked token |
+| `403` | Authenticated, but the role is not allowed (e.g. a non-admin on an admin route) |
 | `409` | Email already registered |
+| `429` | Too many requests from this IP; see the `Retry-After` header |
 | `500` | Unexpected error (details are logged on the server, never returned) |
 
 ## Project structure
@@ -185,6 +190,9 @@ Expired refresh tokens are deleted by an hourly background job. Revoked tokens a
 | `JWT_ACCESS_TTL` | | `15m` | Access token lifetime |
 | `JWT_REFRESH_TTL_DAYS` | | `7` | Refresh token lifetime in days |
 | `PORT` | | `3000` | API port |
+| `RATE_LIMIT_TTL_SECONDS` | | `60` | Rate-limit window |
+| `RATE_LIMIT_MAX` | | `100` | Requests per IP per window, on every route |
+| `AUTH_RATE_LIMIT_MAX` | | `5` | Requests per IP per window on login and sign-up |
 | `SEED_ADMIN_PASSWORD` | | random | Admin password for `npm run seed` (generated and printed once if empty) |
 
 ## Scripts
@@ -201,7 +209,7 @@ Expired refresh tokens are deleted by an hourly background job. Revoked tokens a
 
 See **[ROADMAP.md](ROADMAP.md)** for the full plan. Coming next:
 
-- Roles (user and admin), refresh token reuse detection, per-device sessions and rate limiting
+- Refresh token reuse detection, hashed refresh tokens and per-device sessions
 - Unit tests and a GitHub Actions CI pipeline
 - A polished MUI interface and Swagger API docs
 
