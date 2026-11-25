@@ -49,9 +49,9 @@ Progress on each milestone is tracked in its GitHub issue.
 ## 5. Testing & CI
 - [x] End-to-end tests for the full auth flow (register, login, refresh rotation, logout)
 - [x] Validation, duplicate-account and error-format tests
-- [ ] Unit tests for `AuthService`, `UsersService` and guards
-- [ ] GitHub Actions pipeline: lint, build and tests for API and client
-- [ ] Resolve dependency vulnerabilities
+- [x] Unit tests for `AuthService`, `UsersService` and guards, with coverage thresholds
+- [x] GitHub Actions pipeline: lint, build and tests for API and client, and migrations on MySQL
+- [ ] Resolve dependency vulnerabilities (non-breaking fixes applied; the rest needs a NestJS major upgrade)
 
 ## 6. Frontend
 - [x] Single in-flight token refresh shared by concurrent requests

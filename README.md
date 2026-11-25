@@ -2,6 +2,7 @@
 
 A full stack **JWT authentication** reference project: a **NestJS** API with short-lived access tokens, **rotating refresh tokens** stored in the database, and a **React** client that keeps users signed in silently.
 
+[![CI](https://github.com/madan-stha/auth-system/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/madan-stha/auth-system/actions/workflows/ci.yml)
 ![NestJS](https://img.shields.io/badge/NestJS-10-E0234E?logo=nestjs&logoColor=white)
 ![TypeORM](https://img.shields.io/badge/TypeORM-MySQL-4479A1?logo=mysql&logoColor=white)
 ![Passport JWT](https://img.shields.io/badge/Passport-JWT-34E27A?logo=passport&logoColor=white)
@@ -212,6 +213,12 @@ Expired refresh tokens are deleted by an hourly background job. Revoked tokens a
 | `AUTH_RATE_LIMIT_MAX` | | `5` | Requests per IP per window on login and sign-up |
 | `SEED_ADMIN_PASSWORD` | | random | Admin password for `npm run seed` (generated and printed once if empty) |
 
+## Testing and CI
+
+- **Unit tests** (`npm run test:cov`) cover the auth, users, cleanup, roles and error-handling code with mocked repositories. Core files are at 100% line coverage, and the run fails if any drops below 90%.
+- **End-to-end tests** (`npm run test:e2e`) boot the real app against an in-memory SQL database and exercise every endpoint: sign-up, login, rotation, reuse detection, sessions, roles, validation, rate limits and error format.
+- **GitHub Actions** runs on every push and pull request: lint, build and all tests for the API and the client, plus a job on **MySQL 8.4** that applies, reverts and re-applies every migration, checks the schema matches the entities, seeds, and smoke-tests the running API.
+
 ## Scripts
 
 | | API (`auth-backend`) | Client (`auth-client`) |
@@ -219,7 +226,7 @@ Expired refresh tokens are deleted by an hourly background job. Revoked tokens a
 | Dev server | `npm run start:dev` | `npm run dev` |
 | Build | `npm run build` | `npm run build` |
 | Lint | `npm run lint` | `npm run lint` |
-| Tests | `npm test`, `npm run test:e2e` | – |
+| Tests | `npm test`, `npm run test:cov`, `npm run test:e2e` | – |
 | Database | `npm run migration:run`, `npm run seed` | – |
 
 ## Roadmap

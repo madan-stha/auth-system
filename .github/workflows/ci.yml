@@ -1,0 +1,158 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# Cancel an older run when new commits are pushed to the same branch/PR
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: 24
+
+jobs:
+  api:
+    name: API · lint, build, tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: auth-backend
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: auth-backend/package-lock.json
+
+      - run: npm ci
+      - name: Lint
+        run: npm run lint:check
+      - name: Build
+        run: npm run build
+      - name: Unit tests (with coverage thresholds)
+        run: npm run test:cov -- --coverageReporters=text-summary
+      - name: End-to-end tests (in-memory database)
+        run: npm run test:e2e -- --runInBand
+
+  api-mysql:
+    name: API · migrations and smoke test on MySQL 8.4
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: auth-backend
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: auth_system
+          MYSQL_USER: auth_app
+          MYSQL_PASSWORD: ci-only-password
+          MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      # Throwaway values for the CI database only, not real secrets
+      NODE_ENV: test
+      CORS_ORIGIN: http://localhost:5173
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USERNAME: auth_app
+      DB_PASSWORD: ci-only-password
+      DB_NAME: auth_system
+      JWT_ACCESS_SECRET: ci-access-secret-not-used-anywhere-else-0001
+      JWT_REFRESH_SECRET: ci-refresh-secret-not-used-anywhere-else-0002
+      SEED_ADMIN_PASSWORD: Ci-admin-passw0rd
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: auth-backend/package-lock.json
+
+      - run: npm ci
+
+      - name: Run all migrations on an empty database
+        run: npm run migration:run
+
+      - name: Schema matches the entities (no missing migration)
+        run: npm run typeorm -- migration:generate src/database/migrations/Check --check
+
+      - name: Every migration can be reverted and re-applied
+        run: |
+          count=$(ls src/database/migrations/*.ts | wc -l)
+          for i in $(seq 1 "$count"); do npm run migration:revert; done
+          npm run migration:run
+          npm run typeorm -- migration:generate src/database/migrations/Check --check
+
+      - name: Seed demo and admin users
+        run: npm run seed
+
+      - name: Smoke test the running API
+        run: |
+          npm run build
+          node dist/main > api.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000/ > /dev/null && break
+            sleep 1
+          done
+
+          login() {
+            curl -s -o login.json -w '%{http_code}' -X POST http://localhost:3000/auth/login \
+              -H 'Content-Type: application/json' -d "$1"
+          }
+
+          status=$(login '{"email":"demo@example.com","password":"Demo-passw0rd"}')
+          echo "demo login -> $status"; test "$status" = 201
+          token=$(node -p "require('./login.json').access_token")
+
+          status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/users/me -H "Authorization: Bearer $token")
+          echo "/users/me as demo -> $status"; test "$status" = 200
+
+          status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/users/summary -H "Authorization: Bearer $token")
+          echo "/users/summary as demo -> $status"; test "$status" = 403
+
+          status=$(login '{"email":"admin@example.com","password":"Ci-admin-passw0rd"}')
+          echo "admin login -> $status"; test "$status" = 201
+          token=$(node -p "require('./login.json').access_token")
+          status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/users/summary -H "Authorization: Bearer $token")
+          echo "/users/summary as admin -> $status"; test "$status" = 200
+
+      - name: API log
+        if: always()
+        run: cat api.log || true
+
+  client:
+    name: Client · lint, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: auth-client
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: auth-client/package-lock.json
+
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
