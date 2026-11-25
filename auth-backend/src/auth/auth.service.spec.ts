@@ -8,6 +8,13 @@ import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import { Response } from 'express';
 import * as bcrypt from 'bcrypt';
+
+// Wrap the real bcrypt.compare in a mock so tests can assert it was called.
+// (Jest 30 can't spy on properties of an ES module namespace.)
+jest.mock('bcrypt', () => {
+  const actual = jest.requireActual('bcrypt');
+  return { ...actual, compare: jest.fn(actual.compare) };
+});
 import {
   AuthService,
   hashJti,
@@ -122,7 +129,8 @@ describe('AuthService', () => {
 
     it('still runs bcrypt for an unknown email (constant timing)', async () => {
       users.findByEmailWithPassword.mockResolvedValue(null);
-      const compare = jest.spyOn(bcrypt, 'compare');
+      const compare = bcrypt.compare as unknown as jest.Mock;
+      compare.mockClear();
 
       await expect(
         service.validateUser('nobody@example.com', 'x'),

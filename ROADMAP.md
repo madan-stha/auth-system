@@ -8,7 +8,7 @@ Planned development of **Auth System**, from a working JWT prototype to a secure
 | [2. Validation & error handling](#2-validation--error-handling) | Input validation, safe responses | ✅ Done | [#5](https://github.com/madan-stha/auth-system/issues/5) |
 | [3. Database & infrastructure](#3-database--infrastructure) | Migrations, Docker | ✅ Done | [#6](https://github.com/madan-stha/auth-system/issues/6) |
 | [4. Advanced authentication](#4-advanced-authentication) | Roles, sessions, token reuse detection | ✅ Done | [#7](https://github.com/madan-stha/auth-system/issues/7) |
-| [5. Testing & CI](#5-testing--ci) | Unit and e2e tests, GitHub Actions | 🔄 In progress | [#8](https://github.com/madan-stha/auth-system/issues/8) |
+| [5. Testing & CI](#5-testing--ci) | Unit and e2e tests, GitHub Actions | ✅ Done | [#8](https://github.com/madan-stha/auth-system/issues/8) |
 | [6. Frontend](#6-frontend) | UI, form validation, session handling | 🔄 In progress | [#9](https://github.com/madan-stha/auth-system/issues/9) |
 | [7. Documentation & deployment](#7-documentation--deployment) | API docs, containers, hosting | 🔄 In progress | [#10](https://github.com/madan-stha/auth-system/issues/10) |
 
@@ -51,7 +51,7 @@ Progress on each milestone is tracked in its GitHub issue.
 - [x] Validation, duplicate-account and error-format tests
 - [x] Unit tests for `AuthService`, `UsersService` and guards, with coverage thresholds
 - [x] GitHub Actions pipeline: lint, build and tests for API and client, and migrations on MySQL
-- [ ] Resolve dependency vulnerabilities (non-breaking fixes applied; the rest needs a NestJS major upgrade)
+- [x] Resolve dependency vulnerabilities: upgraded to NestJS 12 (production: 22 → 3 moderate, 0 high or critical)
 
 ## 6. Frontend
 - [x] Single in-flight token refresh shared by concurrent requests
@@ -70,6 +70,7 @@ Progress on each milestone is tracked in its GitHub issue.
 ---
 
 ## Future enhancements
+- Upgrade to TypeORM 1.x (clears the last 3 moderate advisories, in TypeORM 0.3's glob/minimatch)
 - Email verification and password reset
 - OAuth sign-in (Google)
 - Two-factor authentication (TOTP)

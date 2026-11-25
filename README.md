@@ -3,7 +3,7 @@
 A full stack **JWT authentication** reference project: a **NestJS** API with short-lived access tokens, **rotating refresh tokens** stored in the database, and a **React** client that keeps users signed in silently.
 
 [![CI](https://github.com/madan-stha/auth-system/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/madan-stha/auth-system/actions/workflows/ci.yml)
-![NestJS](https://img.shields.io/badge/NestJS-10-E0234E?logo=nestjs&logoColor=white)
+![NestJS](https://img.shields.io/badge/NestJS-12-E0234E?logo=nestjs&logoColor=white)
 ![TypeORM](https://img.shields.io/badge/TypeORM-MySQL-4479A1?logo=mysql&logoColor=white)
 ![Passport JWT](https://img.shields.io/badge/Passport-JWT-34E27A?logo=passport&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-20232A?logo=react&logoColor=61DAFB)
@@ -139,7 +139,7 @@ auth-system/
 
 ## Getting started
 
-**Requirements:** Node.js 20+, and Docker (or your own MySQL 8.4)
+**Requirements:** Node.js 22.12+ (or 20.19+), and Docker (or your own MySQL 8.4)
 
 ### 1. Configure the API
 ```bash

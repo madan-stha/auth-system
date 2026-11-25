@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
-import * as request from 'supertest';
+import request from 'supertest';
 import { RefreshToken } from '../src/auth/refresh-token.entity';
 import { TokenCleanupService } from '../src/auth/token-cleanup.service';
 import { hashJti } from '../src/auth/auth.service';

@@ -1,5 +1,5 @@
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 import { UsersService } from '../src/users/users.service';
 import { Role } from '../src/auth/roles/role.enum';
 import { createTestApp } from './utils/create-test-app';
