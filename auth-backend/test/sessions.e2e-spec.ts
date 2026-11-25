@@ -1,6 +1,6 @@
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as request from 'supertest';
+import request from 'supertest';
 import { RefreshToken } from '../src/auth/refresh-token.entity';
 import { hashJti } from '../src/auth/auth.service';
 import { createTestApp, TestEnv } from './utils/create-test-app';

@@ -1,5 +1,5 @@
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 import { createTestApp } from './utils/create-test-app';
 
 /** Returns "refresh_token=<jwt>" from a response's Set-Cookie header. */
