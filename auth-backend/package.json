@@ -91,9 +91,45 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/*.(t|j)s",
+      "!main.ts",
+      "!database/data-source.ts",
+      "!database/migrations/**",
+      "!database/seeds/seed.ts"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "coverageThreshold": {
+      "./src/auth/auth.service.ts": {
+        "statements": 90,
+        "lines": 90,
+        "functions": 90,
+        "branches": 65
+      },
+      "./src/users/users.service.ts": {
+        "statements": 90,
+        "lines": 90,
+        "functions": 90,
+        "branches": 65
+      },
+      "./src/auth/token-cleanup.service.ts": {
+        "statements": 90,
+        "lines": 90,
+        "functions": 90,
+        "branches": 65
+      },
+      "./src/auth/roles/roles.guard.ts": {
+        "statements": 90,
+        "lines": 90,
+        "functions": 90,
+        "branches": 65
+      },
+      "./src/common/filters/all-exceptions.filter.ts": {
+        "statements": 90,
+        "lines": 90,
+        "functions": 90,
+        "branches": 65
+      }
+    }
   }
 }

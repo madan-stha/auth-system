@@ -2,6 +2,8 @@ import {
   ArgumentsHost,
   BadRequestException,
   ConflictException,
+  HttpException,
+  HttpStatus,
   Logger,
 } from '@nestjs/common';
 import { AllExceptionsFilter } from './all-exceptions.filter';
@@ -72,5 +74,44 @@ describe('AllExceptionsFilter', () => {
     });
     expect(JSON.stringify(body)).not.toContain('ER_ACCESS_DENIED');
     expect(logSpy).toHaveBeenCalled();
+  });
+
+  it('uses the status text when an HttpException has a plain string body', () => {
+    const { host, json } = mockHost('/x');
+
+    filter.catch(
+      new HttpException('Slow down', HttpStatus.TOO_MANY_REQUESTS),
+      host,
+    );
+
+    expect(json.mock.calls[0][0]).toMatchObject({
+      statusCode: 429,
+      error: 'Too Many Requests',
+      message: 'Slow down',
+    });
+  });
+
+  it('falls back to the status text when the body has no error field', () => {
+    const { host, json } = mockHost('/users/me');
+
+    filter.catch(
+      new HttpException({ message: 'Unauthorized' }, HttpStatus.UNAUTHORIZED),
+      host,
+    );
+
+    expect(json.mock.calls[0][0]).toMatchObject({
+      statusCode: 401,
+      error: 'Unauthorized',
+    });
+  });
+
+  it('handles thrown values that are not Error objects', () => {
+    const { host, status } = mockHost();
+    const logSpy = jest.spyOn(Logger.prototype, 'error');
+
+    filter.catch('a plain string', host);
+
+    expect(status).toHaveBeenCalledWith(500);
+    expect(logSpy).toHaveBeenCalledWith(expect.any(String), 'a plain string');
   });
 });
